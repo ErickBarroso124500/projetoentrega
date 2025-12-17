@@ -387,7 +387,7 @@
                 profile: null,
                 tempRole: null,
                 deferredPrompt: null,
-                map: null,
+                mapInstance: null,
                 marker: null,
                 watchId: null,
                 activeOrder: null,
@@ -460,7 +460,7 @@
                     else App.router.go('home');
                 }
             },
-            // --- MÓDULO AUTH (CORRIGIDO) ---
+            // --- MÓDULO AUTH ---
             auth: {
                 switchView: (view) => {
                     ['login', 'roles', 'register'].forEach(v =>
@@ -523,23 +523,18 @@
 
                     try {
                         // 1. Cria usuário no Auth
-                        const { data, error } = await _sb.auth.signUp({ email, password: pass });
+                        const { data, error } = await _sb.auth.signUp({ 
+                            email, 
+                            password: pass,
+                            options: { data: { full_name: name, role: role } } // Metadados para o trigger
+                        });
+                        
                         if(error) throw error;
                         if(!data.user) throw new Error("Falha ao criar usuário");
 
                         App.utils.toast('Usuário criado! Configurando perfil...', 'success');
 
-                        // 2. Insere perfil diretamente
-                        const { error: profileErr } = await _sb.from('profiles').insert({
-                            id: data.user.id,
-                            nome_completo: name,
-                            role: role,
-                            cpf: role === 'motorista' ? document.getElementById('reg-cpf')?.value.trim() : null,
-                            is_verified: role === 'motorista' ? (document.getElementById('verified-msg').style.display === 'block') : false
-                        });
-                        if(profileErr) throw profileErr;
-
-                        // 3. Se lojista, cria loja
+                        // 2. Insere dados adicionais se necessário
                         if(role === 'loja_admin') {
                             const storeName = document.getElementById('reg-store-name').value.trim();
                             const cnpj = document.getElementById('reg-cnpj').value.trim();
@@ -551,6 +546,14 @@
                                 cnpj: cnpj
                             });
                             if(storeErr) throw storeErr;
+                        } else if (role === 'motorista') {
+                             const cpf = document.getElementById('reg-cpf').value.trim();
+                             const isVerified = document.getElementById('verified-msg').style.display === 'block';
+                             const { error: profErr } = await _sb.from('profiles').update({
+                                 cpf: cpf,
+                                 is_verified: isVerified
+                             }).eq('id', data.user.id);
+                             if(profErr) throw profErr;
                         }
 
                         App.utils.toast('Cadastro concluído com sucesso! Faça login.', 'success');
@@ -639,29 +642,28 @@
             },
             // --- MÓDULO CLIENTE ---
             client: {
-    init: async () => {
-        const { data: orders } = await _sb.from('orders').select('*, products(nome)').eq('cliente_id', App.state.user.id).order('created_at', {ascending:false});
-        const ordersList = orders || [];
-        if (ordersList.length === 0) {
-            document.getElementById('client-orders-list').innerHTML = '<p>Nenhum pedido encontrado.</p>';
-            return;
-        }
-        document.getElementById('client-orders-list').innerHTML = ordersList.map(o => `
-            <div class="card">
-                <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
-                    <strong>${o.products.nome}</strong>
-                    <span class="badge status-${o.status}">${o.status.replace('_', ' ')}</span>
-                </div>
-                <p class="text-sm">Entrega em: ${o.endereco_destino}</p>
-                <p class="text-sm">Montagem inclusa: <strong>${o.requer_montagem ? 'Sim' : 'Não'}</strong></p>
-               
-                ${['em_rota', 'aceito', 'concluido'].includes(o.status) ?
-                    `<button class="btn btn-success btn-full btn-sm" onclick="App.map.open('${o.id}', false)">📍 Rastrear Entrega</button>`
-                    : ''}
-            </div>
-        `).join('');
-    },
-    // ... o resto da função confirmOrder permanece igual
+                init: async () => {
+                    const { data: orders } = await _sb.from('orders').select('*, products(nome)').eq('cliente_id', App.state.user.id).order('created_at', {ascending:false});
+                    const ordersList = orders || [];
+                    if (ordersList.length === 0) {
+                        document.getElementById('client-orders-list').innerHTML = '<p>Nenhum pedido encontrado.</p>';
+                        return;
+                    }
+                    document.getElementById('client-orders-list').innerHTML = ordersList.map(o => `
+                        <div class="card">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+                                <strong>${o.products.nome}</strong>
+                                <span class="badge status-${o.status}">${o.status.replace('_', ' ')}</span>
+                            </div>
+                            <p class="text-sm">Entrega em: ${o.endereco_destino}</p>
+                            <p class="text-sm">Montagem inclusa: <strong>${o.requer_montagem ? 'Sim' : 'Não'}</strong></p>
+                           
+                            ${['em_rota', 'aceito', 'concluido'].includes(o.status) ?
+                                `<button class="btn btn-success btn-full btn-sm" onclick="App.map.open('${o.id}', false)">📍 Rastrear Entrega</button>`
+                                : ''}
+                        </div>
+                    `).join('');
+                },
                 confirmOrder: async (pid, sid, price) => {
                     if(!App.state.user) { App.router.go('auth'); return; }
                    
@@ -697,7 +699,7 @@
                     const { data: jobs } = await _sb.from('orders')
                         .select('*, products(nome), stores(nome_loja, cidade)')
                         .or(`status.eq.aguardando_prestador,prestador_id.eq.${App.state.user.id}`);
-                    
+                   
                     const filtered = (jobs || []).filter(j => {
                         if(j.prestador_id === App.state.user.id) return true;
                         if(j.status !== 'aguardando_prestador') return false;
@@ -706,29 +708,30 @@
                     });
 
                     document.getElementById('provider-jobs-list').innerHTML = filtered.map(j => {
-    const isMine = j.prestador_id === App.state.user.id;
-    return `
-        <div class="card" style="${isMine ? 'border-color:var(--success);' : ''}">
-            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                <span class="badge ${isMine ? 'status-aceito' : 'status-pendente'}">${isMine ? 'ACEITO POR VOCÊ' : 'DISPONÍVEL'}</span>
-                <strong style="color:var(--success)">R$ ${j.taxa_servico.toFixed(2)}</strong>
-            </div>
-            <h4>${j.products.nome}</h4>
-            <p class="text-sm">Loja: ${j.stores.nome_loja}</p>
-            <p class="text-sm">Destino: ${j.endereco_destino}</p>
-            
-            <hr style="margin:10px 0; border:0; border-top:1px solid #eee;">
-            
-            ${!isMine ?
-                `<button class="btn btn-primary btn-full" onclick="App.provider.accept('${j.id}')">Aceitar Serviço</button>`
-                :
-                `<button class="btn btn-success btn-full" onclick="App.map.open('${j.id}', true)">
-                    <i class="ri-navigation-line"></i> Iniciar Navegação
-                </button>`
-            }
-        </div>
-    `;
-}).join('') || '<p>Nenhuma oportunidade no momento.</p>';
+                        const isMine = j.prestador_id === App.state.user.id;
+                        return `
+                            <div class="card" style="${isMine ? 'border-color:var(--success);' : ''}">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                                    <span class="badge ${isMine ? 'status-aceito' : 'status-pendente'}">${isMine ? 'ACEITO POR VOCÊ' : 'DISPONÍVEL'}</span>
+                                    <strong style="color:var(--success)">R$ ${j.taxa_servico.toFixed(2)}</strong>
+                                </div>
+                                <h4>${j.products.nome}</h4>
+                                <p class="text-sm">Loja: ${j.stores.nome_loja}</p>
+                                <p class="text-sm">Destino: ${j.endereco_destino}</p>
+                               
+                                <hr style="margin:10px 0; border:0; border-top:1px solid #eee;">
+                               
+                                ${!isMine ?
+                                    `<button class="btn btn-primary btn-full" onclick="App.provider.accept('${j.id}')">Aceitar Serviço</button>`
+                                    :
+                                    `<button class="btn btn-success btn-full" onclick="App.map.open('${j.id}', true)">
+                                        <i class="ri-navigation-line"></i> Iniciar Navegação
+                                     </button>`
+                                }
+                            </div>
+                        `;
+                    }).join('') || '<p>Nenhuma oportunidade no momento.</p>';
+                },
                 accept: async (id) => {
                     const { error } = await _sb.from('orders').update({ prestador_id: App.state.user.id, status: 'aceito' }).eq('id', id);
                     if(error) App.utils.toast('Erro ao aceitar', 'error');
@@ -739,96 +742,95 @@
                 }
             },
             // --- MÓDULO CATALOGO ---
-           catalog: {
-    fetchPublic: async () => {
-        const { data, error } = await _sb.from('products').select('*, stores(nome_loja)');
-        if(error || !data || data.length === 0) {
-            document.getElementById('public-catalog').innerHTML = `
-                <div class="card" style="text-align:center; padding:3rem; grid-column: 1 / -1;">
-                    <p>Nenhum produto disponível no momento.</p>
-                </div>
-            `;
-            return;
-        }
-        document.getElementById('public-catalog').innerHTML = data.map(p => `
-            <div class="card">
-                <div style="height:140px; background:#f1f5f9; border-radius:8px; display:flex; align-items:center; justify-content:center; margin-bottom:1rem;">
-                    <i class="ri-archive-line" style="font-size:3rem; color:#cbd5e1"></i>
-                </div>
-                <div class="badge status-aceito" style="margin-bottom:0.5rem">${p.stores.nome_loja || 'Loja'}</div>
-                <h4>${p.nome}</h4>
-                <h2 style="color:var(--primary)">R$ ${p.preco.toFixed(2)}</h2>
-                <button class="btn btn-secondary btn-full" style="margin-top:1rem" onclick="App.client.confirmOrder('${p.id}', '${p.store_id}', ${p.preco})">Solicitar Entrega</button>
-            </div>
-        `).join('');
-    }
-}
-            // --- MÓDULO MAPAS ---
-          // --- MÓDULO MAPAS (renomeado para evitar conflito com palavra reservada) ---
-maps: {
-    open: (orderId, isDriver) => {
-        App.state.activeOrder = orderId;
-        document.getElementById('map-modal').style.display = 'flex';
-        document.getElementById('btn-start-gps').style.display = isDriver ? 'block' : 'none';
-
-        setTimeout(() => {
-            if (!App.state.mapInstance) {
-                App.state.mapInstance = L.map('map').setView([-23.5505, -46.6333], 13);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(App.state.mapInstance);
-            }
-            if (!isDriver) App.maps.watchOrder(orderId);
-        }, 500);
-    },
-    watchOrder: (orderId) => {
-        _sb.channel(`track-${orderId}`)
-            .on('postgres_changes', { 
-                event: 'UPDATE', 
-                schema: 'public', 
-                table: 'orders', 
-                filter: `id=eq.${orderId}` 
-            }, (payload) => {
-                const { lat_atual, lng_atual, status } = payload.new;
-                if (lat_atual && lng_atual) {
-                    App.maps.updatePin(lat_atual, lng_atual);
-                    document.getElementById('map-status-text').innerText = `Status: ${status}`;
+            catalog: {
+                fetchPublic: async () => {
+                    const { data, error } = await _sb.from('products').select('*, stores(nome_loja)');
+                    if(error || !data || data.length === 0) {
+                        document.getElementById('public-catalog').innerHTML = `
+                            <div class="card" style="text-align:center; padding:3rem; grid-column: 1 / -1;">
+                                <p>Nenhum produto disponível no momento.</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    document.getElementById('public-catalog').innerHTML = data.map(p => `
+                        <div class="card">
+                            <div style="height:140px; background:#f1f5f9; border-radius:8px; display:flex; align-items:center; justify-content:center; margin-bottom:1rem;">
+                                <i class="ri-archive-line" style="font-size:3rem; color:#cbd5e1"></i>
+                            </div>
+                            <div class="badge status-aceito" style="margin-bottom:0.5rem">${p.stores.nome_loja || 'Loja'}</div>
+                            <h4>${p.nome}</h4>
+                            <h2 style="color:var(--primary)">R$ ${p.preco.toFixed(2)}</h2>
+                            <button class="btn btn-secondary btn-full" style="margin-top:1rem" onclick="App.client.confirmOrder('${p.id}', '${p.store_id}', ${p.preco})">Solicitar Entrega</button>
+                        </div>
+                    `).join('');
                 }
-            })
-            .subscribe();
-    },
-    startGPS: () => {
-        if (!navigator.geolocation) return App.utils.toast('GPS não suportado', 'error');
+            },
+            // --- MÓDULO MAPAS ---
+            map: {
+                open: (orderId, isDriver) => {
+                    App.state.activeOrder = orderId;
+                    document.getElementById('map-modal').style.display = 'flex';
+                    document.getElementById('btn-start-gps').style.display = isDriver ? 'block' : 'none';
 
-        document.getElementById('map-status-badge').innerText = "EM ROTA";
-        document.getElementById('map-status-badge').classList.add('status-em_rota');
+                    setTimeout(() => {
+                        if (!App.state.mapInstance) {
+                            App.state.mapInstance = L.map('map').setView([-23.5505, -46.6333], 13);
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(App.state.mapInstance);
+                        }
+                        if (!isDriver) App.map.watchOrder(orderId);
+                    }, 500);
+                },
+                watchOrder: (orderId) => {
+                    _sb.channel(`track-${orderId}`)
+                        .on('postgres_changes', { 
+                            event: 'UPDATE', 
+                            schema: 'public', 
+                            table: 'orders', 
+                            filter: `id=eq.${orderId}` 
+                        }, (payload) => {
+                            const { lat_atual, lng_atual, status } = payload.new;
+                            if (lat_atual && lng_atual) {
+                                App.map.updatePin(lat_atual, lng_atual);
+                                document.getElementById('map-status-text').innerText = `Status: ${status}`;
+                            }
+                        })
+                        .subscribe();
+                },
+                startGPS: () => {
+                    if (!navigator.geolocation) return App.utils.toast('GPS não suportado', 'error');
 
-        _sb.from('orders').update({ status: 'em_rota' }).eq('id', App.state.activeOrder);
+                    document.getElementById('map-status-badge').innerText = "EM ROTA";
+                    document.getElementById('map-status-badge').classList.add('status-em_rota');
 
-        App.state.watchId = navigator.geolocation.watchPosition(async (pos) => {
-            const { latitude, longitude } = pos.coords;
-            App.maps.updatePin(latitude, longitude);
-            await _sb.from('orders').update({ 
-                lat_atual: latitude, 
-                lng_atual: longitude 
-            }).eq('id', App.state.activeOrder);
-        }, err => console.error(err), { enableHighAccuracy: true });
-    },
-    updatePin: (lat, lng) => {
-        if (App.state.marker) {
-            App.state.marker.setLatLng([lat, lng]);
-        } else {
-            App.state.marker = L.marker([lat, lng]).addTo(App.state.mapInstance);
-        }
-        App.state.mapInstance.setView([lat, lng], 16);
-    },
-    close: () => {
-        document.getElementById('map-modal').style.display = 'none';
-        if (App.state.watchId) {
-            navigator.geolocation.clearWatch(App.state.watchId);
-            App.state.watchId = null;
-        }
-        _sb.removeAllChannels();
-    }
-},
+                    _sb.from('orders').update({ status: 'em_rota' }).eq('id', App.state.activeOrder);
+
+                    App.state.watchId = navigator.geolocation.watchPosition(async (pos) => {
+                        const { latitude, longitude } = pos.coords;
+                        App.map.updatePin(latitude, longitude);
+                        await _sb.from('orders').update({ 
+                            lat_atual: latitude, 
+                            lng_atual: longitude 
+                        }).eq('id', App.state.activeOrder);
+                    }, err => console.error(err), { enableHighAccuracy: true });
+                },
+                updatePin: (lat, lng) => {
+                    if (App.state.marker) {
+                        App.state.marker.setLatLng([lat, lng]);
+                    } else {
+                        App.state.marker = L.marker([lat, lng]).addTo(App.state.mapInstance);
+                    }
+                    App.state.mapInstance.setView([lat, lng], 16);
+                },
+                close: () => {
+                    document.getElementById('map-modal').style.display = 'none';
+                    if (App.state.watchId) {
+                        navigator.geolocation.clearWatch(App.state.watchId);
+                        App.state.watchId = null;
+                    }
+                    _sb.removeAllChannels();
+                }
+            },
             // --- UTILS ---
             utils: {
                 toast: (msg, type='success') => {
