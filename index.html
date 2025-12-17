@@ -706,29 +706,29 @@
                     });
 
                     document.getElementById('provider-jobs-list').innerHTML = filtered.map(j => {
-                        const isMine = j.prestador_id === App.state.user.id;
-                        return `
-                        <div class="card" style="${isMine ? 'border-color:var(--success);' : ''}">
-                            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                                <span class="badge ${isMine ? 'status-aceito' : 'status-pendente'}">${isMine ? 'ACEITO POR VOCÊ' : 'DISPONÍVEL'}</span>
-                                <strong style="color:var(--success)">R$ ${j.taxa_servico.toFixed(2)}</strong>
-                            </div>
-                            <h4>${j.products.nome}</h4>
-                            <p class="text-sm">Loja: ${j.stores.nome_loja}</p>
-                            <p class="text-sm">Destino: ${j.endereco_destino}</p>
-                           
-                            <hr style="margin:10px 0; border:0; border-top:1px solid #eee;">
-                           
-                            ${!isMine ?
-                                `<button class="btn btn-primary btn-full" onclick="App.provider.accept('${j.id}')">Aceitar Serviço</button>`
-                                :
-                                `<button class="btn btn-success btn-full" onclick="App.map.open('${j.id}', true)">
-                                    <i class="ri-navigation-line"></i> Iniciar Navegação
-                                 </button>`
-                            }
-                        </div>
-                    `).join('') || '<p>Nenhuma oportunidade no momento.</p>';
-                },
+    const isMine = j.prestador_id === App.state.user.id;
+    return `
+        <div class="card" style="${isMine ? 'border-color:var(--success);' : ''}">
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <span class="badge ${isMine ? 'status-aceito' : 'status-pendente'}">${isMine ? 'ACEITO POR VOCÊ' : 'DISPONÍVEL'}</span>
+                <strong style="color:var(--success)">R$ ${j.taxa_servico.toFixed(2)}</strong>
+            </div>
+            <h4>${j.products.nome}</h4>
+            <p class="text-sm">Loja: ${j.stores.nome_loja}</p>
+            <p class="text-sm">Destino: ${j.endereco_destino}</p>
+            
+            <hr style="margin:10px 0; border:0; border-top:1px solid #eee;">
+            
+            ${!isMine ?
+                `<button class="btn btn-primary btn-full" onclick="App.provider.accept('${j.id}')">Aceitar Serviço</button>`
+                :
+                `<button class="btn btn-success btn-full" onclick="App.map.open('${j.id}', true)">
+                    <i class="ri-navigation-line"></i> Iniciar Navegação
+                </button>`
+            }
+        </div>
+    `;
+}).join('') || '<p>Nenhuma oportunidade no momento.</p>';
                 accept: async (id) => {
                     const { error } = await _sb.from('orders').update({ prestador_id: App.state.user.id, status: 'aceito' }).eq('id', id);
                     if(error) App.utils.toast('Erro ao aceitar', 'error');
