@@ -739,26 +739,30 @@
                 }
             },
             // --- MÓDULO CATALOGO ---
-            catalog: {
-                fetchPublic: async () => {
-                    const { data, error } = await _sb.from('products').select('*, stores(nome_loja)');
-                    if(error || !data) {
-                        document.getElementById('public-catalog').innerHTML = '<p>Erro ao carregar catálogo.</p>';
-                        return;
-                    }
-                    document.getElementById('public-catalog').innerHTML = data.map(p => `
-                        <div class="card">
-                            <div style="height:140px; background:#f1f5f9; border-radius:8px; display:flex; align-items:center; justify-content:center; margin-bottom:1rem;">
-                                <i class="ri-archive-line" style="font-size:3rem; color:#cbd5e1"></i>
-                            </div>
-                            <div class="badge status-aceito" style="margin-bottom:0.5rem">${p.stores.nome_loja}</div>
-                            <h4>${p.nome}</h4>
-                            <h2 style="color:var(--primary)">R$ ${p.preco}</h2>
-                            <button class="btn btn-secondary btn-full" style="margin-top:1rem" onclick="App.client.confirmOrder('${p.id}', '${p.store_id}', ${p.preco})">Solicitar Entrega</button>
-                        </div>
-                    `).join('');
-                }
-            },
+           catalog: {
+    fetchPublic: async () => {
+        const { data, error } = await _sb.from('products').select('*, stores(nome_loja)');
+        if(error || !data || data.length === 0) {
+            document.getElementById('public-catalog').innerHTML = `
+                <div class="card" style="text-align:center; padding:3rem; grid-column: 1 / -1;">
+                    <p>Nenhum produto disponível no momento.</p>
+                </div>
+            `;
+            return;
+        }
+        document.getElementById('public-catalog').innerHTML = data.map(p => `
+            <div class="card">
+                <div style="height:140px; background:#f1f5f9; border-radius:8px; display:flex; align-items:center; justify-content:center; margin-bottom:1rem;">
+                    <i class="ri-archive-line" style="font-size:3rem; color:#cbd5e1"></i>
+                </div>
+                <div class="badge status-aceito" style="margin-bottom:0.5rem">${p.stores.nome_loja || 'Loja'}</div>
+                <h4>${p.nome}</h4>
+                <h2 style="color:var(--primary)">R$ ${p.preco.toFixed(2)}</h2>
+                <button class="btn btn-secondary btn-full" style="margin-top:1rem" onclick="App.client.confirmOrder('${p.id}', '${p.store_id}', ${p.preco})">Solicitar Entrega</button>
+            </div>
+        `).join('');
+    }
+}
             // --- MÓDULO MAPAS ---
             map: {
                 open: (orderId, isDriver) => {
