@@ -639,23 +639,29 @@
             },
             // --- MÓDULO CLIENTE ---
             client: {
-                init: async () => {
-                    const { data: orders } = await _sb.from('orders').select('*, products(nome)').eq('cliente_id', App.state.user.id).order('created_at', {ascending:false});
-                    document.getElementById('client-orders-list').innerHTML = (orders || []).map(o => `
-                        <div class="card">
-                            <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
-                                <strong>${o.products.nome}</strong>
-                                <span class="badge status-${o.status}">${o.status.replace('_', ' ')}</span>
-                            </div>
-                            <p class="text-sm">Entrega em: ${o.endereco_destino}</p>
-                            <p class="text-sm">Montagem inclusa: <strong>${o.requer_montagem ? 'Sim' : 'Não'}</strong></p>
-                           
-                            ${['em_rota', 'aceito', 'concluido'].includes(o.status) ?
-                                `<button class="btn btn-success btn-full btn-sm" onclick="App.map.open('${o.id}', false)">📍 Rastrear Entrega</button>`
-                                : ''}
-                        </div>
-                    `).join('') || '<p>Nenhum pedido encontrado.</p>';
-                },
+    init: async () => {
+        const { data: orders } = await _sb.from('orders').select('*, products(nome)').eq('cliente_id', App.state.user.id).order('created_at', {ascending:false});
+        const ordersList = orders || [];
+        if (ordersList.length === 0) {
+            document.getElementById('client-orders-list').innerHTML = '<p>Nenhum pedido encontrado.</p>';
+            return;
+        }
+        document.getElementById('client-orders-list').innerHTML = ordersList.map(o => `
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+                    <strong>${o.products.nome}</strong>
+                    <span class="badge status-${o.status}">${o.status.replace('_', ' ')}</span>
+                </div>
+                <p class="text-sm">Entrega em: ${o.endereco_destino}</p>
+                <p class="text-sm">Montagem inclusa: <strong>${o.requer_montagem ? 'Sim' : 'Não'}</strong></p>
+               
+                ${['em_rota', 'aceito', 'concluido'].includes(o.status) ?
+                    `<button class="btn btn-success btn-full btn-sm" onclick="App.map.open('${o.id}', false)">📍 Rastrear Entrega</button>`
+                    : ''}
+            </div>
+        `).join('');
+    },
+    // ... o resto da função confirmOrder permanece igual
                 confirmOrder: async (pid, sid, price) => {
                     if(!App.state.user) { App.router.go('auth'); return; }
                    
