@@ -764,56 +764,71 @@
     }
 }
             // --- MÓDULO MAPAS ---
-            map: {
-                open: (orderId, isDriver) => {
-                    App.state.activeOrder = orderId;
-                    document.getElementById('map-modal').style.display = 'flex';
-                    document.getElementById('btn-start-gps').style.display = isDriver ? 'block' : 'none';
-                   
-                    setTimeout(() => {
-                        if(!App.state.map) {
-                            App.state.map = L.map('map').setView([-23.5505, -46.6333], 13);
-                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(App.state.map);
-                        }
-                        if(!isDriver) App.map.watchOrder(orderId);
-                    }, 500);
-                },
-                watchOrder: (orderId) => {
-                    _sb.channel(`track-${orderId}`)
-                        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${orderId}` }, (payload) => {
-                            const { lat_atual, lng_atual, status } = payload.new;
-                            if(lat_atual && lng_atual) {
-                                App.map.updatePin(lat_atual, lng_atual);
-                                document.getElementById('map-status-text').innerText = `Status: ${status}`;
-                            }
-                        })
-                        .subscribe();
-                },
-                startGPS: () => {
-                    if(!navigator.geolocation) return App.utils.toast('GPS não suportado', 'error');
-                   
-                    document.getElementById('map-status-badge').innerText = "EM ROTA";
-                    document.getElementById('map-status-badge').classList.add('status-em_rota');
-                   
-                    _sb.from('orders').update({ status: 'em_rota' }).eq('id', App.state.activeOrder);
+          // --- MÓDULO MAPAS (renomeado para evitar conflito com palavra reservada) ---
+maps: {
+    open: (orderId, isDriver) => {
+        App.state.activeOrder = orderId;
+        document.getElementById('map-modal').style.display = 'flex';
+        document.getElementById('btn-start-gps').style.display = isDriver ? 'block' : 'none';
 
-                    App.state.watchId = navigator.geolocation.watchPosition(async (pos) => {
-                        const { latitude, longitude } = pos.coords;
-                        App.map.updatePin(latitude, longitude);
-                        await _sb.from('orders').update({ lat_atual: latitude, lng_atual: longitude }).eq('id', App.state.activeOrder);
-                    }, err => console.error(err), { enableHighAccuracy: true });
-                },
-                updatePin: (lat, lng) => {
-                    if(App.state.marker) App.state.marker.setLatLng([lat, lng]);
-                    else App.state.marker = L.marker([lat, lng]).addTo(App.state.map);
-                    App.state.map.setView([lat, lng], 16);
-                },
-                close: () => {
-                    document.getElementById('map-modal').style.display = 'none';
-                    if(App.state.watchId) navigator.geolocation.clearWatch(App.state.watchId);
-                    _sb.removeAllChannels();
+        setTimeout(() => {
+            if (!App.state.mapInstance) {
+                App.state.mapInstance = L.map('map').setView([-23.5505, -46.6333], 13);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(App.state.mapInstance);
+            }
+            if (!isDriver) App.maps.watchOrder(orderId);
+        }, 500);
+    },
+    watchOrder: (orderId) => {
+        _sb.channel(`track-${orderId}`)
+            .on('postgres_changes', { 
+                event: 'UPDATE', 
+                schema: 'public', 
+                table: 'orders', 
+                filter: `id=eq.${orderId}` 
+            }, (payload) => {
+                const { lat_atual, lng_atual, status } = payload.new;
+                if (lat_atual && lng_atual) {
+                    App.maps.updatePin(lat_atual, lng_atual);
+                    document.getElementById('map-status-text').innerText = `Status: ${status}`;
                 }
-            },
+            })
+            .subscribe();
+    },
+    startGPS: () => {
+        if (!navigator.geolocation) return App.utils.toast('GPS não suportado', 'error');
+
+        document.getElementById('map-status-badge').innerText = "EM ROTA";
+        document.getElementById('map-status-badge').classList.add('status-em_rota');
+
+        _sb.from('orders').update({ status: 'em_rota' }).eq('id', App.state.activeOrder);
+
+        App.state.watchId = navigator.geolocation.watchPosition(async (pos) => {
+            const { latitude, longitude } = pos.coords;
+            App.maps.updatePin(latitude, longitude);
+            await _sb.from('orders').update({ 
+                lat_atual: latitude, 
+                lng_atual: longitude 
+            }).eq('id', App.state.activeOrder);
+        }, err => console.error(err), { enableHighAccuracy: true });
+    },
+    updatePin: (lat, lng) => {
+        if (App.state.marker) {
+            App.state.marker.setLatLng([lat, lng]);
+        } else {
+            App.state.marker = L.marker([lat, lng]).addTo(App.state.mapInstance);
+        }
+        App.state.mapInstance.setView([lat, lng], 16);
+    },
+    close: () => {
+        document.getElementById('map-modal').style.display = 'none';
+        if (App.state.watchId) {
+            navigator.geolocation.clearWatch(App.state.watchId);
+            App.state.watchId = null;
+        }
+        _sb.removeAllChannels();
+    }
+},
             // --- UTILS ---
             utils: {
                 toast: (msg, type='success') => {
