@@ -3,402 +3,788 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LogiMóveis - Marketplace de Grandes Entregas</title>
+    <title>LogiMóveis | Logística de Grande Porte</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --primary: #2563eb;
-            --dark: #0f172a;
-            --light: #f8fafc;
+            /* Palette de Cores Modernas */
+            --primary: #2563eb; /* Azul Royal */
+            --primary-dark: #1e40af;
+            --secondary: #64748b; /* Slate Grey */
+            --background: #f1f5f9;
             --surface: #ffffff;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-main: #0f172a;
             --border: #e2e8f0;
+            
+            /* UI Utils */
+            --radius-sm: 6px;
+            --radius-md: 12px;
+            --radius-lg: 20px;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-        body { background: var(--light); color: var(--dark); padding-bottom: 50px; }
+        /* Reset & Base */
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--background); color: var(--text-main); line-height: 1.6; min-height: 100vh; display: flex; flex-direction: column; }
+        
+        /* Typography */
+        h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.025em; margin-bottom: 0.5rem; }
+        p { margin-bottom: 1rem; color: var(--secondary); }
+        .text-sm { font-size: 0.875rem; }
+        .text-xs { font-size: 0.75rem; }
 
-        /* HEADER */
-        header { background: var(--surface); padding: 1rem 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; }
-        .logo { font-weight: 900; font-size: 1.5rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
-        .nav-actions { display: flex; gap: 1rem; }
-
-        /* CONTAINERS */
-        .container { max-width: 1200px; margin: 0 auto; padding: 2rem 5%; }
-        .section { display: none; }
-        .section.active { display: block; animation: fadeUp 0.4s ease; }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* CARDS & GRIDS */
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
-        .card { background: var(--surface); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); transition: 0.2s; }
-        .card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
-        .card img { width: 100%; height: 150px; object-fit: cover; border-radius: 8px; background: #eee; margin-bottom: 1rem; }
-
-        /* BUTTONS & INPUTS */
-        .btn { padding: 0.8rem 1.5rem; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; justify-content: center; transition: 0.2s; }
+        /* Component: Buttons */
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; transition: var(--transition); border: none; font-size: 0.95rem; }
         .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: #1d4ed8; }
-        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--dark); }
-        .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+        .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+        .btn-secondary { background: white; border: 1px solid var(--border); color: var(--text-main); }
+        .btn-secondary:hover { border-color: var(--primary); color: var(--primary); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-full { width: 100%; }
 
-        input, select { width: 100%; padding: 0.8rem; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1rem; background: #fdfdfd; }
-        label { display: block; margin-bottom: 0.4rem; font-size: 0.9rem; font-weight: 600; color: #64748b; }
+        /* Component: Inputs */
+        .input-group { margin-bottom: 1.25rem; text-align: left; }
+        .input-group label { display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.375rem; color: var(--text-main); }
+        .input-control { width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: inherit; transition: var(--transition); background: #f8fafc; }
+        .input-control:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
 
-        /* AUTH SELECTION CARDS */
-        .role-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-        .role-card { cursor: pointer; border: 2px solid var(--border); padding: 1.5rem; border-radius: 12px; text-align: center; }
-        .role-card.selected { border-color: var(--primary); background: #eff6ff; }
-        .role-icon { font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem; display: block; }
+        /* Component: Header */
+        header { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); padding: 1rem 5%; position: sticky; top: 0; z-index: 50; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
+        .logo span { color: var(--text-main); }
+        .nav-items { display: flex; gap: 1rem; align-items: center; }
 
-        /* CAMERA MOCK */
-        #camera-preview { width: 100%; height: 200px; background: #000; border-radius: 8px; display: none; object-fit: cover;}
-        .verified-badge { color: green; display: flex; align-items: center; gap: 0.5rem; font-weight: bold; display: none; margin-bottom: 1rem;}
+        /* Component: Cards & Containers */
+        .container { max-width: 1280px; margin: 0 auto; padding: 2rem 5%; width: 100%; }
+        .card { background: var(--surface); border-radius: var(--radius-md); border: 1px solid var(--border); padding: 1.5rem; box-shadow: var(--shadow-sm); transition: var(--transition); position: relative; overflow: hidden; }
+        .card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+        .grid { display: grid; gap: 2rem; }
+        .grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+        .grid-3 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
 
-        /* UTILS */
-        .hidden { display: none !important; }
-        .hero { text-align: center; margin-bottom: 3rem; }
-        .hero h1 { font-size: 2.5rem; margin-bottom: 0.5rem; letter-spacing: -1px; }
-        .hero p { color: #64748b; font-size: 1.1rem; }
+        /* Sections (View Management) */
+        .view-section { display: none; animation: fadeIn 0.4s ease-out; }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* MODAL */
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: white; width: 90%; max-width: 500px; padding: 2rem; border-radius: 16px; max-height: 90vh; overflow-y: auto; }
+        /* Custom: Auth Screens */
+        .auth-container { max-width: 450px; margin: 3rem auto; text-align: center; }
+        .role-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem; }
+        .role-card { background: white; border: 2px solid var(--border); padding: 1.5rem; border-radius: var(--radius-md); cursor: pointer; transition: var(--transition); }
+        .role-card:hover { border-color: var(--primary); background: #eff6ff; }
+        .role-card.selected { border-color: var(--primary); background: #dbeafe; ring: 2px solid var(--primary); }
+        .role-icon { font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem; }
+
+        /* Custom: Camera & Upload */
+        .camera-box { background: black; border-radius: var(--radius-sm); width: 100%; height: 250px; overflow: hidden; position: relative; display: none; }
+        .camera-box video { width: 100%; height: 100%; object-fit: cover; }
+        .verified-badge { background: #dcfce7; color: #166534; padding: 0.5rem; border-radius: var(--radius-sm); display: flex; align-items: center; gap: 0.5rem; font-weight: bold; justify-content: center; margin-top: 1rem; display: none; }
+
+        /* Custom: Toast Notifications */
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background: white; padding: 1rem 1.5rem; border-radius: var(--radius-sm); box-shadow: var(--shadow-lg); border-left: 4px solid var(--primary); display: flex; align-items: center; gap: 10px; min-width: 300px; animation: slideIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+        .toast.success { border-left-color: var(--success); }
+        .toast.error { border-left-color: var(--danger); }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* Custom: Modals */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
+        .modal-content { background: white; padding: 2rem; border-radius: var(--radius-md); width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; position: relative; animation: modalPop 0.3s ease; }
+        @keyframes modalPop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .close-modal { position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; }
+
+        /* Maps */
+        #map-container { height: 400px; width: 100%; border-radius: var(--radius-md); margin-bottom: 1rem; z-index: 1; }
+
+        /* Status Badges */
+        .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+        .bg-pendente { background: #fef3c7; color: #b45309; }
+        .bg-aguardando_motorista { background: #e0f2fe; color: #0369a1; }
+        .bg-em_rota { background: #dbeafe; color: #1e40af; border: 1px solid #2563eb; }
+        .bg-concluido { background: #dcfce7; color: #15803d; }
     </style>
 </head>
 <body>
 
+    <div id="toast-container"></div>
+
     <header>
-        <div class="logo"><i class="ri-truck-fill"></i> LogiMóveis</div>
-        <div class="nav-actions" id="nav-actions">
-            <button class="btn btn-primary" onclick="openAuthModal()">Entrar / Cadastrar</button>
+        <div class="logo">
+            <i class="ri-truck-fill"></i> Logi<span>Móveis</span>
+        </div>
+        <div class="nav-items" id="nav-actions">
+            <button class="btn btn-primary" onclick="App.router.go('auth')">Entrar</button>
         </div>
     </header>
 
-    <div id="home-section" class="section active container">
-        <div class="hero">
-            <h1>Transporte de Cargas Pesadas & Montagem</h1>
-            <p>Conectando lojas, entregadores e montadores em um só lugar.</p>
+    <section id="view-home" class="view-section active container">
+        <div style="text-align: center; padding: 4rem 0;">
+            <h1 style="font-size: 3rem;">Entregas Grandes,<br>Soluções Gigantes.</h1>
+            <p style="font-size: 1.2rem; max-width: 600px; margin: 0 auto;">
+                A plataforma completa para comprar móveis, solicitar fretes de caminhão e contratar montadores especializados em um clique.
+            </p>
+            <div style="margin-top: 2rem; display:flex; justify-content:center; gap:1rem;">
+                <button class="btn btn-primary" onclick="document.getElementById('catalog-grid').scrollIntoView({behavior:'smooth'})">Ver Ofertas</button>
+                <button class="btn btn-secondary" onclick="App.router.go('auth')">Sou Lojista / Motorista</button>
+            </div>
         </div>
-        
-        <h3 style="margin-bottom: 1rem;">Vitrine de Ofertas</h3>
-        <div id="public-catalog" class="grid">
-            <p>Carregando ofertas...</p>
+
+        <div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+            <h3>Destaques da Semana</h3>
+            <div class="input-group" style="width: 300px; margin:0;">
+                <input type="text" placeholder="Buscar móveis..." class="input-control">
+            </div>
         </div>
-    </div>
 
-    <div id="dashboard-section" class="section container">
-        <div id="dashboard-content"></div>
-    </div>
+        <div id="catalog-grid" class="grid grid-3">
+            <div class="card" style="display:flex; align-items:center; justify-content:center; height: 200px;">
+                <p>Carregando catálogo...</p>
+            </div>
+        </div>
+    </section>
 
-    <div id="auth-modal" class="modal">
-        <div class="modal-content">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
-                <h2 id="auth-title">Acessar Conta</h2>
-                <button onclick="closeAuthModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+    <section id="view-auth" class="view-section container">
+        <div class="card auth-container">
+            <h2 id="auth-title">Acesse sua conta</h2>
+            <p id="auth-subtitle">Entre para gerenciar pedidos e serviços</p>
+
+            <div id="form-login">
+                <div class="input-group">
+                    <label>E-mail</label>
+                    <input type="email" id="login-email" class="input-control" placeholder="ex: joao@gmail.com">
+                </div>
+                <div class="input-group">
+                    <label>Senha</label>
+                    <input type="password" id="login-pass" class="input-control" placeholder="******">
+                </div>
+                <button class="btn btn-primary btn-full" onclick="App.auth.login()">Entrar no Sistema</button>
+                <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+                    <p class="text-sm">Novo por aqui?</p>
+                    <button class="btn btn-secondary btn-full" onclick="App.auth.toggleMode('role-select')">Criar Nova Conta</button>
+                </div>
             </div>
 
-            <div id="login-form">
-                <label>Email</label>
-                <input type="email" id="login-email" placeholder="seu@email.com">
-                <label>Senha</label>
-                <input type="password" id="login-pass" placeholder="******">
-                <button class="btn btn-primary" style="width:100%" onclick="login()">Entrar</button>
-                <p style="text-align:center; margin-top:1rem; cursor:pointer; color:var(--primary)" onclick="showRoleSelection()">Não tem conta? Cadastre-se</p>
-            </div>
-
-            <div id="role-selection" class="hidden">
-                <p style="margin-bottom:1rem; text-align:center;">Quem é você?</p>
-                <div class="role-grid">
-                    <div class="role-card" onclick="selectRole('cliente')">
-                        <i class="ri-user-smile-line role-icon"></i> Cliente
+            <div id="form-role-select" style="display:none;">
+                <p>Qual o seu perfil?</p>
+                <div class="role-selector">
+                    <div class="role-card" onclick="App.auth.selectRole('cliente')">
+                        <i class="ri-user-smile-line role-icon"></i>
+                        <h4>Cliente</h4>
+                        <span class="text-xs">Quero comprar e pedir serviços</span>
                     </div>
-                    <div class="role-card" onclick="selectRole('loja_admin')">
-                        <i class="ri-store-2-line role-icon"></i> Loja
+                    <div class="role-card" onclick="App.auth.selectRole('loja_admin')">
+                        <i class="ri-store-2-line role-icon"></i>
+                        <h4>Loja</h4>
+                        <span class="text-xs">Vender e despachar</span>
                     </div>
-                    <div class="role-card" onclick="selectRole('motorista')">
-                        <i class="ri-truck-line role-icon"></i> Motorista
+                    <div class="role-card" onclick="App.auth.selectRole('motorista')">
+                        <i class="ri-truck-line role-icon"></i>
+                        <h4>Motorista</h4>
+                        <span class="text-xs">Fazer fretes</span>
                     </div>
-                    <div class="role-card" onclick="selectRole('montador')">
-                        <i class="ri-hammer-line role-icon"></i> Montador
+                    <div class="role-card" onclick="App.auth.selectRole('montador')">
+                        <i class="ri-tools-line role-icon"></i>
+                        <h4>Montador</h4>
+                        <span class="text-xs">Montar móveis</span>
                     </div>
                 </div>
-                <button class="btn btn-outline" style="width:100%" onclick="backToLogin()">Voltar ao Login</button>
+                <button class="btn btn-secondary btn-full" style="margin-top:1rem" onclick="App.auth.toggleMode('login')">Voltar</button>
             </div>
 
-            <div id="register-form" class="hidden">
-                <h3 id="reg-role-title" style="margin-bottom:1rem;">Cadastro</h3>
-                
-                <label>Email</label>
-                <input type="email" id="reg-email">
-                <label>Senha</label>
-                <input type="password" id="reg-pass">
-                
+            <div id="form-register" style="display:none;">
+                <div class="input-group">
+                    <label>Nome Completo</label>
+                    <input type="text" id="reg-name" class="input-control">
+                </div>
+                <div class="input-group">
+                    <label>E-mail</label>
+                    <input type="email" id="reg-email" class="input-control">
+                </div>
+                <div class="input-group">
+                    <label>Senha</label>
+                    <input type="password" id="reg-pass" class="input-control">
+                </div>
+
                 <div id="dynamic-fields"></div>
 
-                <button class="btn btn-primary" style="width:100%" onclick="registerUser()">Finalizar Cadastro</button>
-                <button class="btn btn-outline" style="width:100%; margin-top:0.5rem" onclick="showRoleSelection()">Voltar</button>
+                <button class="btn btn-primary btn-full" style="margin-top:1.5rem" onclick="App.auth.register()">Finalizar Cadastro</button>
+                <button class="btn btn-secondary btn-full" style="margin-top:0.5rem" onclick="App.auth.toggleMode('role-select')">Voltar</button>
             </div>
+        </div>
+    </section>
+
+    <section id="view-loja" class="view-section container">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
+            <div>
+                <h2>Painel do Lojista</h2>
+                <p>Gerencie seu catálogo e despache pedidos.</p>
+            </div>
+            <button class="btn btn-primary" onclick="App.store.openProductModal()">
+                <i class="ri-add-line"></i> Novo Produto
+            </button>
+        </div>
+
+        <h3>Pedidos Pendentes de Despacho</h3>
+        <div id="loja-orders-list" class="grid grid-2" style="margin-bottom:3rem;"></div>
+        
+        <h3>Meus Produtos Ativos</h3>
+        <div id="loja-products-list" class="grid grid-3"></div>
+    </section>
+
+    <section id="view-cliente" class="view-section container">
+        <h2>Meus Pedidos</h2>
+        <p>Acompanhe o status e rastreie suas entregas em tempo real.</p>
+        <div id="cliente-orders-list" class="grid grid-2"></div>
+    </section>
+
+    <section id="view-motorista" class="view-section container">
+        <div class="card" style="margin-bottom: 2rem; background: var(--dark); color: var(--text-main); border-left: 5px solid var(--primary);">
+            <h3>Central de Fretes</h3>
+            <p>Aceite corridas e ganhe comissão por entrega.</p>
+        </div>
+        
+        <h3>Oportunidades Disponíveis</h3>
+        <div id="motorista-jobs-list" class="grid grid-2"></div>
+    </section>
+
+    <div id="global-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-modal" onclick="App.ui.closeModal()">&times;</button>
+            <div id="modal-body"></div>
         </div>
     </div>
 
     <script>
-        // --- 1. CONFIGURAÇÃO SUPABASE (Global) ---
-        const supabaseUrl = 'SUA_URL_SUPABASE'; // Coloque sua URL
-        const supabaseKey = 'SUA_KEY_ANON'; // Coloque sua KEY
-        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+        // ==========================================
+        // 1. CONFIGURAÇÃO (Coloque suas chaves aqui)
+        // ==========================================
+        const CONFIG = {
+            supabaseUrl: 'https://djxcvgrunadpkzwpxtom.supabase.co', 
+            supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqeGN2Z3J1bmFkcGt6d3B4dG9tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NjczOTYsImV4cCI6MjA3ODA0MzM5Nn0.CRTsAj-yIqXJwrx1CGh6dhTjvsgyazHidOseJQwyRpI' 
+        };
 
-        // --- 2. ESTADO GLOBAL ---
-        let selectedRole = null;
-        let currentUser = null;
+        // Inicialização Global Única
+        const supabase = supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey);
 
-        // --- 3. INICIALIZAÇÃO ---
-        async function init() {
-            // Verifica sessão
-            const { data } = await supabase.auth.getSession();
-            if (data.session) {
-                currentUser = data.session.user;
-                updateHeader(true);
-                // Se já estiver logado, redireciona para dashboard, mas permite ver home
-            } else {
-                updateHeader(false);
-            }
-            // Sempre carrega o catálogo público
-            loadPublicCatalog();
-        }
+        // ==========================================
+        // 2. NÚCLEO DA APLICAÇÃO (APP CORE)
+        // ==========================================
+        const App = {
+            state: {
+                user: null,
+                profile: null,
+                role: null,
+                activeOrder: null,
+                map: null,
+                marker: null,
+                watchId: null
+            },
 
-        // --- 4. LÓGICA DE UI (Catálogo Público) ---
-        async function loadPublicCatalog() {
-            const { data: products, error } = await supabase
-                .from('products')
-                .select('*, stores(nome_loja, cidade)');
-            
-            if (error) {
-                console.error(error);
-                document.getElementById('public-catalog').innerHTML = '<p>Erro ao carregar produtos. Verifique as Políticas RLS no Supabase.</p>';
-                return;
-            }
-
-            const grid = document.getElementById('public-catalog');
-            grid.innerHTML = products.length ? products.map(p => `
-                <div class="card">
-                    <img src="${p.imagem_url || 'https://placehold.co/400x300?text=Produto'}" alt="${p.nome}">
-                    <div style="margin-bottom:0.5rem; font-size:0.8rem; color:#64748b;">${p.stores.nome_loja} • ${p.stores.cidade}</div>
-                    <h4>${p.nome}</h4>
-                    <p style="font-size:1.2rem; font-weight:bold; color:var(--primary); margin:0.5rem 0;">R$ ${p.preco}</p>
-                    <button class="btn btn-primary" style="width:100%" onclick="buyProduct('${p.id}')">Ver Detalhes</button>
-                </div>
-            `).join('') : '<p>Nenhuma oferta disponível no momento.</p>';
-        }
-
-        function buyProduct(id) {
-            if (!currentUser) {
-                alert('Faça login para comprar ou solicitar serviços.');
-                openAuthModal();
-            } else {
-                // Lógica de compra (simplificada, redireciona para dashboard)
-                alert('Redirecionando para área de pedidos...');
-                loadDashboard();
-            }
-        }
-
-        function updateHeader(isLogged) {
-            const nav = document.getElementById('nav-actions');
-            if (isLogged) {
-                nav.innerHTML = `
-                    <button class="btn btn-outline" onclick="loadDashboard()">Meu Painel</button>
-                    <button class="btn btn-outline" onclick="logout()">Sair</button>
-                `;
-            } else {
-                nav.innerHTML = `<button class="btn btn-primary" onclick="openAuthModal()">Entrar / Cadastrar</button>`;
-            }
-        }
-
-        // --- 5. SISTEMA DE CADASTRO INTELIGENTE ---
-        
-        function openAuthModal() { document.getElementById('auth-modal').style.display = 'flex'; }
-        function closeAuthModal() { document.getElementById('auth-modal').style.display = 'none'; backToLogin(); }
-        
-        function backToLogin() {
-            document.getElementById('login-form').classList.remove('hidden');
-            document.getElementById('role-selection').classList.add('hidden');
-            document.getElementById('register-form').classList.add('hidden');
-            document.getElementById('auth-title').innerText = "Acessar Conta";
-        }
-
-        function showRoleSelection() {
-            document.getElementById('login-form').classList.add('hidden');
-            document.getElementById('register-form').classList.add('hidden');
-            document.getElementById('role-selection').classList.remove('hidden');
-            document.getElementById('auth-title').innerText = "Criar Conta";
-        }
-
-        function selectRole(role) {
-            selectedRole = role;
-            document.getElementById('role-selection').classList.add('hidden');
-            document.getElementById('register-form').classList.remove('hidden');
-            
-            const container = document.getElementById('dynamic-fields');
-            container.innerHTML = ''; // Limpa campos anteriores
-
-            // Título
-            const titles = { 'cliente': 'Cliente', 'loja_admin': 'Administrador de Loja', 'motorista': 'Motorista Parceiro', 'montador': 'Montador Parceiro' };
-            document.getElementById('reg-role-title').innerText = `Cadastro de ${titles[role]}`;
-
-            // GERAÇÃO DOS CAMPOS DINÂMICOS
-            let html = '';
-
-            if (role === 'loja_admin') {
-                html += `<label>Nome da Loja</label><input type="text" id="reg-store-name">`;
-                html += `<label>CNPJ</label><input type="text" id="reg-cnpj" placeholder="00.000.000/0000-00">`;
-            } 
-            else if (role === 'motorista') {
-                html += `<label>Nome Completo</label><input type="text" id="reg-name">`;
-                html += `<label>CPF</label><input type="text" id="reg-cpf">`;
+            init: async () => {
+                // Checa sessão ao carregar
+                const { data } = await supabase.auth.getSession();
+                if (data.session) {
+                    App.state.user = data.session.user;
+                    await App.auth.loadProfile();
+                } else {
+                    App.router.updateNav();
+                }
                 
-                // Simulação de Upload
-                html += `<label>Foto da Habilitação (Frente e Verso)</label>
-                         <input type="file" id="reg-cnh" multiple style="border:1px dashed #ccc;">`;
+                // Sempre carrega catalogo público
+                App.store.loadPublicCatalog();
+            },
+
+            // --- Módulo UI (Interface) ---
+            ui: {
+                toast: (msg, type = 'success') => {
+                    const container = document.getElementById('toast-container');
+                    const el = document.createElement('div');
+                    el.className = `toast ${type}`;
+                    el.innerHTML = `
+                        <i class="ri-${type === 'success' ? 'checkbox-circle' : 'error-warning'}-fill" style="font-size:1.2rem"></i>
+                        <span>${msg}</span>
+                    `;
+                    container.appendChild(el);
+                    setTimeout(() => el.remove(), 4000);
+                },
                 
-                // Simulação de Verificação Facial
-                html += `<div style="margin-top:1rem; border:1px solid #ddd; padding:1rem; border-radius:8px;">
-                            <label style="color:var(--primary)">Verificação de Segurança (Capacete/EPI)</label>
-                            <p style="font-size:0.8rem; margin-bottom:0.5rem">Precisamos verificar se você possui os equipamentos.</p>
-                            <video id="camera-preview" autoplay playsinline></video>
-                            <div id="verification-status" class="verified-badge"><i class="ri-checkbox-circle-fill"></i> Verificado com IA</div>
-                            <button class="btn btn-outline" id="btn-camera" style="width:100%; margin-top:0.5rem" onclick="startCameraSim()">
-                                <i class="ri-camera-fill"></i> Tirar Foto de Verificação
+                closeModal: () => {
+                    document.getElementById('global-modal').style.display = 'none';
+                    // Se tiver mapa rodando, limpa
+                    if(App.state.map) { App.state.map.remove(); App.state.map = null; }
+                    if(App.state.watchId) { navigator.geolocation.clearWatch(App.state.watchId); }
+                    supabase.removeAllChannels(); // Para realtime
+                },
+
+                openModal: (content) => {
+                    const modal = document.getElementById('global-modal');
+                    document.getElementById('modal-body').innerHTML = content;
+                    modal.style.display = 'flex';
+                }
+            },
+
+            // --- Módulo Router (Navegação) ---
+            router: {
+                go: (viewId) => {
+                    document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+                    const target = document.getElementById(`view-${viewId}`);
+                    if(target) target.classList.add('active');
+                    window.scrollTo(0,0);
+                },
+
+                updateNav: () => {
+                    const nav = document.getElementById('nav-actions');
+                    if (App.state.user) {
+                        nav.innerHTML = `
+                            <div style="text-align:right; margin-right:10px;">
+                                <div class="text-sm font-bold">${App.state.profile?.nome_completo || 'Usuário'}</div>
+                                <div class="text-xs badge bg-aguardando_motorista">${App.state.role}</div>
+                            </div>
+                            <button class="btn btn-secondary" onclick="App.router.goDashboard()">Painel</button>
+                            <button class="btn btn-danger" onclick="App.auth.logout()">Sair</button>
+                        `;
+                    } else {
+                        nav.innerHTML = `<button class="btn btn-primary" onclick="App.router.go('auth')">Entrar / Cadastrar</button>`;
+                    }
+                },
+
+                goDashboard: () => {
+                    const r = App.state.role;
+                    if (r === 'loja_admin') { App.store.loadDashboard(); App.router.go('loja'); }
+                    else if (r === 'cliente') { App.client.loadDashboard(); App.router.go('cliente'); }
+                    else if (r === 'motorista') { App.driver.loadDashboard(); App.router.go('motorista'); }
+                    else { App.router.go('home'); }
+                }
+            },
+
+            // --- Módulo de Autenticação ---
+            auth: {
+                tempRole: null,
+
+                toggleMode: (mode) => {
+                    ['form-login', 'form-role-select', 'form-register'].forEach(id => 
+                        document.getElementById(id).style.display = 'none');
+                    
+                    if(mode === 'login') document.getElementById('form-login').style.display = 'block';
+                    if(mode === 'role-select') document.getElementById('form-role-select').style.display = 'block';
+                    if(mode === 'register') document.getElementById('form-register').style.display = 'block';
+                },
+
+                selectRole: (role) => {
+                    App.auth.tempRole = role;
+                    
+                    // Renderiza campos específicos
+                    const container = document.getElementById('dynamic-fields');
+                    let html = '';
+                    
+                    if (role === 'loja_admin') {
+                        html = `
+                            <div class="input-group">
+                                <label>Nome da Loja</label><input type="text" id="reg-store-name" class="input-control">
+                            </div>
+                            <div class="input-group">
+                                <label>CNPJ</label><input type="text" id="reg-cnpj" class="input-control">
+                            </div>`;
+                    } else if (role === 'motorista') {
+                        html = `
+                            <div class="input-group"><label>CPF</label><input type="text" id="reg-cpf" class="input-control"></div>
+                            <div style="background:#f8fafc; padding:1rem; border-radius:8px; border:1px dashed var(--border);">
+                                <label style="display:block; margin-bottom:0.5rem; font-weight:bold;">Verificação Facial (Segurança)</label>
+                                <div class="camera-box" id="camera-box"><video id="video-preview" autoplay playsinline></video></div>
+                                <div id="verified-badge" class="verified-badge"><i class="ri-shield-check-fill"></i> Motorista Verificado</div>
+                                <button id="btn-camera" class="btn btn-secondary btn-full" onclick="App.verification.startCamera()">
+                                    <i class="ri-camera-fill"></i> Validar Identidade
+                                </button>
+                            </div>`;
+                    }
+                    
+                    container.innerHTML = html;
+                    App.auth.toggleMode('register');
+                },
+
+                register: async () => {
+                    const email = document.getElementById('reg-email').value;
+                    const pass = document.getElementById('reg-pass').value;
+                    const name = document.getElementById('reg-name').value;
+                    const role = App.auth.tempRole;
+
+                    // Metadados
+                    let meta = { role: role, full_name: name };
+                    
+                    // Validação de Motorista (Simulada)
+                    if (role === 'motorista' && !document.getElementById('verified-badge').style.display === 'flex') {
+                        return App.ui.toast('Você precisa fazer a validação facial!', 'error');
+                    }
+
+                    try {
+                        App.ui.toast('Criando conta...', 'success');
+                        const { data, error } = await supabase.auth.signUp({
+                            email, password: pass, options: { data: meta }
+                        });
+                        if (error) throw error;
+
+                        // Salva dados extras nas tabelas relacionais
+                        if (role === 'loja_admin') {
+                            const lojaNome = document.getElementById('reg-store-name').value;
+                            await supabase.from('stores').insert({ 
+                                admin_id: data.user.id, 
+                                nome_loja: lojaNome,
+                                cnpj: document.getElementById('reg-cnpj').value
+                            });
+                        }
+                        
+                        App.ui.toast('Conta criada! Faça login.', 'success');
+                        App.auth.toggleMode('login');
+
+                    } catch (e) {
+                        App.ui.toast(e.message, 'error');
+                    }
+                },
+
+                login: async () => {
+                    const email = document.getElementById('login-email').value;
+                    const pass = document.getElementById('login-pass').value;
+                    
+                    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+                    
+                    if (error) App.ui.toast('Login falhou. Verifique os dados.', 'error');
+                    else {
+                        App.state.user = data.user;
+                        await App.auth.loadProfile();
+                        App.ui.toast('Bem-vindo de volta!', 'success');
+                    }
+                },
+
+                loadProfile: async () => {
+                    const { data } = await supabase.from('profiles').select('*').eq('id', App.state.user.id).single();
+                    App.state.profile = data;
+                    App.state.role = data.role;
+                    App.router.updateNav();
+                    App.router.goDashboard();
+                },
+
+                logout: async () => {
+                    await supabase.auth.signOut();
+                    window.location.reload();
+                }
+            },
+
+            // --- Módulo de Verificação (Camera) ---
+            verification: {
+                startCamera: async () => {
+                    const video = document.getElementById('video-preview');
+                    const box = document.getElementById('camera-box');
+                    const btn = document.getElementById('btn-camera');
+                    
+                    box.style.display = 'block';
+                    
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                        video.srcObject = stream;
+                        
+                        btn.innerText = "Analisando Rosto...";
+                        
+                        // Simula IA analisando por 3 segundos
+                        setTimeout(() => {
+                            stream.getTracks().forEach(track => track.stop()); // Para câmera
+                            box.style.display = 'none';
+                            document.getElementById('verified-badge').style.display = 'flex';
+                            btn.style.display = 'none';
+                            App.ui.toast('Identidade validada com sucesso!', 'success');
+                        }, 3000);
+
+                    } catch (e) {
+                        App.ui.toast('Erro ao acessar câmera. Permita o acesso.', 'error');
+                    }
+                }
+            },
+
+            // --- Módulo Lojista ---
+            store: {
+                loadPublicCatalog: async () => {
+                    const { data } = await supabase.from('products').select('*, stores(nome_loja, cidade)');
+                    const grid = document.getElementById('catalog-grid');
+                    
+                    grid.innerHTML = data.map(p => `
+                        <div class="card">
+                            <div style="height:150px; background:#e2e8f0; border-radius:6px; margin-bottom:1rem; display:flex; align-items:center; justify-content:center; color:#94a3b8;">
+                                <i class="ri-image-2-line" style="font-size:3rem"></i>
+                            </div>
+                            <div class="text-xs" style="color:var(--secondary)">${p.stores.nome_loja} • ${p.stores.cidade}</div>
+                            <h4 style="margin:0.5rem 0">${p.nome}</h4>
+                            <h3 style="color:var(--primary)">R$ ${p.preco}</h3>
+                            <button class="btn btn-primary btn-full" style="margin-top:1rem" onclick="App.client.initOrder('${p.id}', '${p.store_id}', ${p.preco})">
+                                Solicitar Frete
                             </button>
-                         </div>`;
-            } 
-            else {
-                // Cliente e Montador
-                html += `<label>Nome Completo</label><input type="text" id="reg-name">`;
-                html += `<label>CPF</label><input type="text" id="reg-cpf">`;
-            }
+                        </div>
+                    `).join('');
+                },
 
-            container.innerHTML = html;
-        }
+                loadDashboard: async () => {
+                    const { data: store } = await supabase.from('stores').select('id').eq('admin_id', App.state.user.id).single();
+                    if(!store) return App.ui.toast('Você precisa cadastrar uma loja primeiro.', 'error');
+                    App.state.storeId = store.id;
 
-        // Simula a câmera e verificação
-        async function startCameraSim() {
-            const video = document.getElementById('camera-preview');
-            const btn = document.getElementById('btn-camera');
-            
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                video.srcObject = stream;
-                video.style.display = 'block';
-                btn.innerText = "Analisando...";
-                
-                // Simula tempo de processamento da IA
-                setTimeout(() => {
-                    stream.getTracks().forEach(track => track.stop()); // Para a camera
-                    video.style.display = 'none';
-                    document.getElementById('verification-status').style.display = 'flex';
-                    btn.style.display = 'none';
-                    alert('Verificação Facial Concluída! Equipamentos detectados.');
-                }, 3000);
-            } catch (e) {
-                alert('Não foi possível abrir a câmera. Verifique as permissões.');
-            }
-        }
+                    // Load Pedidos
+                    const { data: orders } = await supabase.from('orders').select('*, products(nome)').eq('store_id', store.id).order('created_at', {ascending:false});
+                    const orderList = document.getElementById('loja-orders-list');
+                    orderList.innerHTML = orders.map(o => `
+                        <div class="card">
+                            <div style="display:flex; justify-content:space-between;">
+                                <strong>#${o.id.slice(0,4)}</strong>
+                                <span class="badge bg-${o.status}">${o.status}</span>
+                            </div>
+                            <h4 style="margin:0.5rem 0">${o.products.nome}</h4>
+                            <p class="text-sm">Destino: ${o.endereco_destino}</p>
+                            ${o.status === 'pendente' ? `
+                                <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid #eee;">
+                                    <label class="text-xs">Agendar Coleta:</label>
+                                    <input type="datetime-local" class="input-control" id="date-${o.id}">
+                                    <button class="btn btn-primary btn-full" style="margin-top:0.5rem" onclick="App.store.dispatchOrder('${o.id}')">Despachar para Motoristas</button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('');
+                },
 
-        // --- 6. REGISTRO E LOGIN ---
-        async function registerUser() {
-            const email = document.getElementById('reg-email').value;
-            const password = document.getElementById('reg-pass').value;
-            const metaData = { role: selectedRole };
+                openProductModal: () => {
+                    App.ui.openModal(`
+                        <h3>Novo Produto</h3>
+                        <div class="input-group"><label>Nome</label><input id="new-prod-name" class="input-control"></div>
+                        <div class="input-group"><label>Preço</label><input id="new-prod-price" type="number" class="input-control"></div>
+                        <div class="input-group"><label>Peso (kg)</label><input id="new-prod-weight" type="number" class="input-control"></div>
+                        <button class="btn btn-primary btn-full" onclick="App.store.saveProduct()">Salvar Produto</button>
+                    `);
+                },
 
-            // Captura dados extras
-            if(document.getElementById('reg-name')) metaData.full_name = document.getElementById('reg-name').value;
-            if(document.getElementById('reg-cpf')) metaData.cpf = document.getElementById('reg-cpf').value;
-            if(document.getElementById('reg-cnpj')) metaData.cnpj = document.getElementById('reg-cnpj').value;
-            if(document.getElementById('reg-store-name')) metaData.store_name = document.getElementById('reg-store-name').value;
+                saveProduct: async () => {
+                    const name = document.getElementById('new-prod-name').value;
+                    const price = document.getElementById('new-prod-price').value;
+                    const weight = document.getElementById('new-prod-weight').value;
 
-            try {
-                // 1. Cria User no Auth
-                const { data, error } = await supabase.auth.signUp({
-                    email, password,
-                    options: { data: metaData } // Salva no user_metadata temporariamente
-                });
-                
-                if (error) throw error;
-
-                // 2. Se for loja, cria a entrada na tabela stores
-                if (selectedRole === 'loja_admin' && data.user) {
-                    await supabase.from('stores').insert({
-                        admin_id: data.user.id,
-                        nome_loja: metaData.store_name,
-                        cnpj: metaData.cnpj
+                    const { error } = await supabase.from('products').insert({
+                        store_id: App.state.storeId,
+                        nome: name, preco: price, peso_kg: weight
                     });
+
+                    if(!error) {
+                        App.ui.toast('Produto cadastrado!');
+                        App.ui.closeModal();
+                        App.store.loadDashboard(); // Recarrega
+                    }
+                },
+
+                dispatchOrder: async (id) => {
+                    const date = document.getElementById(`date-${id}`).value;
+                    if(!date) return App.ui.toast('Escolha uma data', 'error');
+                    
+                    await supabase.from('orders').update({
+                        status: 'aguardando_motorista',
+                        data_agendada: new Date(date).toISOString()
+                    }).eq('id', id);
+                    
+                    App.ui.toast('Pedido despachado! Motoristas já podem ver.');
+                    App.store.loadDashboard();
                 }
-                
-                // 3. Se for motorista, update perfil com dados "fakes" de verificação
-                if (selectedRole === 'motorista' && data.user) {
-                    // Aqui você faria o upload real da imagem para o Supabase Storage
-                    await supabase.from('profiles').update({
-                        cpf: metaData.cpf,
-                        is_verified: true // Assumindo que a verificação de câmera passou
-                    }).eq('id', data.user.id);
+            },
+
+            // --- Módulo Cliente ---
+            client: {
+                initOrder: (prodId, storeId, price) => {
+                    if(!App.state.user) return App.ui.toast('Faça login para comprar', 'error');
+                    if(App.state.role !== 'cliente') return App.ui.toast('Apenas clientes podem comprar', 'error');
+
+                    App.ui.openModal(`
+                        <h3>Finalizar Pedido</h3>
+                        <p>Valor Produto: R$ ${price}</p>
+                        
+                        <div class="input-group">
+                            <label>Endereço de Entrega</label>
+                            <input id="order-address" class="input-control" placeholder="Rua, Número, Bairro">
+                        </div>
+                        
+                        <div style="background:#f0f9ff; padding:1rem; border-radius:8px; margin-bottom:1rem;">
+                            <input type="checkbox" id="check-montagem">
+                            <label for="check-montagem" style="display:inline; margin-left:0.5rem;">Adicionar Montagem (+R$ ${(price*0.15).toFixed(2)})</label>
+                        </div>
+
+                        <button class="btn btn-success btn-full" onclick="App.client.placeOrder('${prodId}', '${storeId}', ${price})">Confirmar Pedido</button>
+                    `);
+                },
+
+                placeOrder: async (prodId, storeId, price) => {
+                    const address = document.getElementById('order-address').value;
+                    const montagem = document.getElementById('check-montagem').checked;
+                    let taxa = price * 0.15; // Taxa base de frete
+                    if (montagem) taxa += (price * 0.15); // Taxa extra
+
+                    const { error } = await supabase.from('orders').insert({
+                        cliente_id: App.state.user.id,
+                        product_id: prodId,
+                        store_id: storeId,
+                        endereco_destino: address,
+                        requer_montagem: montagem,
+                        taxa_servico: taxa,
+                        status: 'pendente'
+                    });
+
+                    if(!error) {
+                        App.ui.toast('Pedido realizado com sucesso!');
+                        App.ui.closeModal();
+                        App.router.go('cliente');
+                        App.client.loadDashboard();
+                    }
+                },
+
+                loadDashboard: async () => {
+                    const { data: orders } = await supabase.from('orders').select('*, products(nome)').eq('cliente_id', App.state.user.id);
+                    const list = document.getElementById('cliente-orders-list');
+                    
+                    list.innerHTML = orders.map(o => `
+                        <div class="card">
+                            <span class="badge bg-${o.status}" style="margin-bottom:0.5rem">${o.status}</span>
+                            <h4>${o.products.nome}</h4>
+                            <p>Endereço: ${o.endereco_destino}</p>
+                            ${o.data_agendada ? `<p>Agendado para: <strong>${new Date(o.data_agendada).toLocaleString()}</strong></p>` : '<p>Aguardando loja agendar...</p>'}
+                            
+                            ${['em_rota', 'concluido'].includes(o.status) ? 
+                                `<button class="btn btn-primary btn-full" onclick="App.map.openViewer('${o.id}')"><i class="ri-map-pin-line"></i> Rastrear Entrega</button>` 
+                                : ''}
+                        </div>
+                    `).join('');
                 }
+            },
 
-                alert('Cadastro realizado com sucesso! Faça login.');
-                backToLogin();
+            // --- Módulo Motorista ---
+            driver: {
+                loadDashboard: async () => {
+                    const { data: jobs } = await supabase.from('orders')
+                        .select('*, products(nome), stores(nome_loja, cidade)')
+                        .or(`status.eq.aguardando_motorista,prestador_id.eq.${App.state.user.id}`);
+                    
+                    const list = document.getElementById('motorista-jobs-list');
+                    list.innerHTML = jobs.map(j => {
+                        const isMine = j.prestador_id === App.state.user.id;
+                        return `
+                        <div class="card" style="${isMine ? 'border:2px solid var(--primary)' : ''}">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+                                <span class="badge ${isMine ? 'bg-em_rota' : 'bg-aguardando_motorista'}">${isMine ? 'MEU JOB' : 'DISPONÍVEL'}</span>
+                                <span style="font-weight:bold; color:var(--success)">+ R$ ${j.taxa_servico}</span>
+                            </div>
+                            <h4>${j.products.nome}</h4>
+                            <p class="text-sm">Retira: ${j.stores.nome_loja} (${j.stores.cidade})</p>
+                            <p class="text-sm">Entrega: ${j.endereco_destino}</p>
+                            <hr style="margin:1rem 0; border-color:#eee;">
+                            
+                            ${!isMine ? 
+                                `<button class="btn btn-primary btn-full" onclick="App.driver.acceptJob('${j.id}')">Aceitar Corrida</button>` 
+                                : 
+                                `<button class="btn btn-success btn-full" onclick="App.map.startNavigation('${j.id}')">
+                                    <i class="ri-navigation-fill"></i> Iniciar Rota / GPS
+                                 </button>`
+                            }
+                        </div>
+                    `}).join('');
+                },
 
-            } catch (err) {
-                alert('Erro no cadastro: ' + err.message);
+                acceptJob: async (id) => {
+                    await supabase.from('orders').update({
+                        prestador_id: App.state.user.id,
+                        status: 'aceito' // Motorista pegou, mas ainda não saiu
+                    }).eq('id', id);
+                    App.ui.toast('Você pegou o serviço!');
+                    App.driver.loadDashboard();
+                }
+            },
+
+            // --- Módulo de Mapas (Leaflet) ---
+            map: {
+                // Modo Cliente (Visualizar)
+                openViewer: (orderId) => {
+                    App.ui.openModal(`
+                        <h3>Rastreamento em Tempo Real</h3>
+                        <div id="map-container"></div>
+                        <p id="map-status">Conectando ao satélite...</p>
+                    `);
+                    
+                    setTimeout(() => {
+                        const map = L.map('map-container').setView([-23.5505, -46.6333], 13);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                        App.state.map = map;
+                        
+                        // Assina Realtime
+                        const channel = supabase.channel('tracking')
+                            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${orderId}` }, 
+                            (payload) => {
+                                const { lat_atual, lng_atual } = payload.new;
+                                if(lat_atual) {
+                                    if(App.state.marker) App.state.marker.setLatLng([lat_atual, lng_atual]);
+                                    else App.state.marker = L.marker([lat_atual, lng_atual]).addTo(map).bindPopup("Caminhão").openPopup();
+                                    
+                                    map.setView([lat_atual, lng_atual]);
+                                    document.getElementById('map-status').innerText = "Atualizado agora mesmo.";
+                                }
+                            })
+                            .subscribe();
+                    }, 500); // Delay para o DOM do modal renderizar
+                },
+
+                // Modo Motorista (Transmitir)
+                startNavigation: (orderId) => {
+                    App.ui.openModal(`
+                        <h3>Navegação Ativa</h3>
+                        <div id="map-container"></div>
+                        <p>Sua localização está sendo enviada para o cliente.</p>
+                        <button class="btn btn-danger btn-full" onclick="App.ui.closeModal()">Parar Rota</button>
+                    `);
+
+                    setTimeout(() => {
+                        const map = L.map('map-container').setView([-23.5505, -46.6333], 15);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                        
+                        // Marca pedido como "em_rota"
+                        supabase.from('orders').update({ status: 'em_rota' }).eq('id', orderId).then();
+
+                        // Geolocation Watch
+                        if (navigator.geolocation) {
+                            App.state.watchId = navigator.geolocation.watchPosition(async (pos) => {
+                                const { latitude, longitude } = pos.coords;
+                                
+                                // Atualiza Mapa Local
+                                if(!App.state.marker) App.state.marker = L.marker([latitude, longitude]).addTo(map);
+                                else App.state.marker.setLatLng([latitude, longitude]);
+                                map.setView([latitude, longitude]);
+
+                                // Envia para Banco
+                                await supabase.from('orders').update({
+                                    lat_atual: latitude,
+                                    lng_atual: longitude
+                                }).eq('id', orderId);
+                                
+                            }, err => App.ui.toast(err.message, 'error'), { enableHighAccuracy: true });
+                        }
+                    }, 500);
+                }
             }
-        }
+        };
 
-        async function login() {
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-pass').value;
-            
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) alert(error.message);
-            else {
-                closeAuthModal();
-                window.location.reload(); // Recarrega para atualizar estado
-            }
-        }
-
-        async function logout() {
-            await supabase.auth.signOut();
-            window.location.reload();
-        }
-
-        // --- 7. DASHBOARD LOGIC (Simplificado para caber no exemplo) ---
-        async function loadDashboard() {
-            document.getElementById('home-section').classList.remove('active');
-            document.getElementById('dashboard-section').classList.add('active');
-            
-            // Reutilizando lógica do script anterior, mas adaptada
-            const content = document.getElementById('dashboard-content');
-            
-            // Busca perfil atualizado
-            const { data: profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
-
-            content.innerHTML = `
-                <h2>Painel de Controle - ${profile.role.toUpperCase()}</h2>
-                <p>Bem-vindo, ${profile.nome_completo || profile.email}</p>
-                <div class="card" style="margin-top:2rem">
-                    <h3>Status da Conta</h3>
-                    <p>Verificado: ${profile.is_verified ? '<span style="color:green">SIM</span>' : 'Não/Pendente'}</p>
-                    ${profile.role === 'loja_admin' ? `<p>CNPJ: ${profile.cnpj || 'Não informado'}</p>` : ''}
-                    ${profile.role === 'motorista' ? `<p>Habilitação: Enviada</p>` : ''}
-                </div>
-                <button class="btn btn-outline" onclick="window.location.reload()" style="margin-top:1rem">Voltar para Home</button>
-            `;
-        }
-
-        // Inicia App
-        init();
+        // ==========================================
+        // 3. INICIAR APLICAÇÃO
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', App.init);
 
     </script>
 </body>
